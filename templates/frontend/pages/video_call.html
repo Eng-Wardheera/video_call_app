@@ -259,52 +259,54 @@ let selectedUser = null;
 let inCall = false;
 let currentCallId = null;
 
-/* CAMERA FIX (IMPORTANT) */
-async function startCamera() {
+/* CAMERA */
+async function startCamera(){
     try {
         const stream = await navigator.mediaDevices.getUserMedia({
-            video: true,
-            audio: true
+            video:true,
+            audio:true
         });
 
         document.getElementById("localVideo").srcObject = stream;
 
-    } catch (err) {
-        alert("Camera error: " + err.message);
+    } catch(e){
+        alert("Camera error: " + e.message);
     }
 }
 
-/* START CAMERA IMMEDIATELY */
-startCamera();
+/* FIX: WAIT CONNECT */
+socket.on("connect", () => {
+    socket.emit("join_call", {
+        id: "{{ current_user.id }}",
+        name: "{{ current_user.fullname }}"
+    });
+});
 
-/* SOCKET JOIN */
-socket.emit("join_call", currentUser);
+startCamera();
 
 /* USERS */
 socket.on("online_users", users => {
     const box = document.querySelector(".users");
-    box.innerHTML = "<h3>Online</h3>";
+    box.innerHTML = "<h3>Online ("+users.length+")</h3>";
 
     users.forEach(u => {
         const div = document.createElement("div");
         div.className = "user";
-        div.innerText = u.name;
+        div.innerText = "🟢 " + u.name;
 
-        div.onclick = () => selectedUser = u;
+        div.onclick = () => {
+            selectedUser = u;
+        };
 
         box.appendChild(div);
     });
 });
 
 /* CHAT */
-function addMsg(from, text){
-    const div = document.createElement("div");
-    div.className = "msg";
-    div.innerHTML = `<b>${from}:</b> ${text}`;
-    document.querySelector(".messages").appendChild(div);
-}
-
 document.querySelector(".send").onclick = () => {
+
+    if(!selectedUser) return alert("Select user");
+
     if(inCall) return alert("Chat disabled");
 
     const text = document.getElementById("msgInput").value;
@@ -320,7 +322,10 @@ document.querySelector(".send").onclick = () => {
 };
 
 socket.on("receive_message", data => {
-    addMsg(data.from, data.text);
+    const div = document.createElement("div");
+    div.className = "msg";
+    div.innerHTML = `<b>${data.from}:</b> ${data.text}`;
+    document.querySelector(".messages").appendChild(div);
 });
 
 /* CALL */
@@ -333,8 +338,6 @@ document.querySelector(".call").onclick = () => {
         from: currentUser,
         to: selectedUser
     });
-
-    addMsg("System", "Calling " + selectedUser.name);
 };
 
 /* END */
@@ -346,30 +349,30 @@ document.querySelector(".end").onclick = () => {
     });
 };
 
-/* POPUP */
+/* INCOMING */
 socket.on("incoming_call", data => {
-    const popup = document.getElementById("popup");
-    popup.style.display = "block";
+    currentCallId = data.call_id;
 
+    document.getElementById("popup").style.display = "block";
     document.getElementById("popupText").innerText =
         "Call from " + data.from.name;
 
-    currentCallId = data.call_id;
-
     document.querySelector(".accept").onclick = () => {
-        popup.style.display = "none";
+        document.getElementById("popup").style.display = "none";
         inCall = true;
     };
 
     document.querySelector(".reject").onclick = () => {
-        popup.style.display = "none";
+        document.getElementById("popup").style.display = "none";
     };
 });
 
+/* CALL END */
 socket.on("call_ended", () => {
     inCall = false;
 });
 </script>
+
 
 </body>
 </html>
