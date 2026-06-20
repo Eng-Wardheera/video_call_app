@@ -16,6 +16,8 @@ requests
 python-dotenv
 
 email-validator
+flask-socketio 
+eventlet
 
 pycountry
 pytz

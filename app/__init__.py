@@ -1,6 +1,7 @@
 from datetime import datetime
 
 import os
+from flask_socketio import SocketIO
 import traceback
 from flask import Flask, flash, redirect, render_template, url_for
 from flask_cors import CORS
@@ -8,6 +9,7 @@ from flask_login import LoginManager, current_user
 from authlib.integrations.flask_client import OAuth
 import pytz
 from dotenv import load_dotenv
+from yaml import emit
 from app.tracker import init_tracker
 from app.extensions import mongo, mail
 from datetime import datetime
@@ -31,11 +33,11 @@ ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
 UPLOAD_FOLDER = "static/backend/uploads"
 
 
-MAX_RETRIES = 5  # try 5 times to get a unique journey_code
 
  # ----- Timezone -----
   
 # Google OAuth
+socketio = SocketIO(cors_allowed_origins="*")  # global instance
 
 
 oauth = OAuth()  # global instance
@@ -68,7 +70,8 @@ def create_app():
 
 
     # Secure Secret Key
-    app.secret_key = os.getenv('SECRET_KEY', 'XWt7819618552904Sm32Mxx2102dklF')
+    app.config["SECRET_KEY"] = os.getenv('SECRET_KEY', 'XWt7819618552904Sm32Mxx2102dklF')
+
    
 
     # Configuration
@@ -93,6 +96,10 @@ def create_app():
     app.config['MAIL_PASSWORD'] = 'dvml ylyo ivek xrab'  # Your Gmail password or App password
     app.config['MAIL_USE_TLS'] = True
     app.config['MAIL_USE_SSL'] = False
+
+    # Session fix (IMPORTANT for Google OAuth)
+    app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+    app.config["SESSION_COOKIE_SECURE"] = False
    
 
   
@@ -180,6 +187,8 @@ def create_app():
 
     
     app.register_blueprint(bp) # ,url_prefix='/main'
+     # INIT SOCKETIO HERE 👇
+    socketio.init_app(app, cors_allowed_origins="*")
     
    
 

@@ -1,5 +1,6 @@
 from decimal import Decimal
 import enum
+from bson import ObjectId
 from flask_login import UserMixin
 from datetime import datetime, timedelta
 from app import now_eat
@@ -108,77 +109,79 @@ class User(UserMixin):
         return f"<User {self.username}>"
 
 
-class Project:
-    def __init__(self, data=None):
-        self.data = data or {}
+class Message:
+    def __init__(self, data: dict):
+        data = data or {}
 
-        # Identity & Metadata
-        self.id = str(self.data.get("_id", ""))
-        self.user_id = str(self.data.get("user_id", ""))
-        self.title = self.data.get("title", "Untitled Project")
-        self.description = self.data.get("description", "")
+        self.id = str(data.get("_id")) if data.get("_id") else None
 
-        # Images
-        self.thumbnail = self.data.get("thumbnail", "static/default_thumb.jpg")
-        self.gallery = self.data.get("gallery", [])
+        self.conversation_id = data.get("conversation_id")
 
-        # Videos (clean + safe handling)
-        video_data = self.data.get("video", {})
+        self.sender_id = str(data.get("sender_id")) if data.get("sender_id") else None
+        self.receiver_id = str(data.get("receiver_id")) if data.get("receiver_id") else None
 
-        self.video_url = video_data.get("url", "")
-        self.video_path = video_data.get("path", "")
+        self.content = data.get("content")
+        self.type = data.get("type", "text")  # text, image, file, video, audio
 
-        # 🔥 NEW: direct fallback support (if DB stores video_url outside dict)
-        self.video_url_alt = self.data.get("video_url", "")
-        self.video_path_alt = self.data.get("video_path", "")
+        self.status = data.get("status", "sent")  # sent, delivered, read
 
-        # Socials
-        socials = self.data.get("social_links", {})
-        self.social_links = {
-            "github": socials.get("github", ""),
-            "live_demo": socials.get("live_demo", ""),
-            "linkedin": socials.get("linkedin", ""),
-            "instagram": socials.get("instagram", ""),
-            "facebook": socials.get("facebook", ""),
-            "tiktok": socials.get("tiktok", "")
-        }
-
-        self.created_at = self.data.get("created_at")
-
-    # 🔥 FINAL VIDEO URL (SMART FALLBACK)
-    def get_video_url(self):
-        return (
-            self.video_url
-            or self.video_url_alt
-            or ""
-        )
-
-    # 🔥 FINAL VIDEO PATH (SMART FALLBACK)
-    def get_video_path(self):
-        return (
-            self.video_path
-            or self.video_path_alt
-            or ""
-        )
+        self.created_at = data.get("created_at", datetime.utcnow())
+        self.updated_at = data.get("updated_at", datetime.utcnow())
 
     def to_dict(self):
         return {
-            "user_id": self.user_id,
-            "title": self.title,
-            "description": self.description,
-            "thumbnail": self.thumbnail,
-            "gallery": self.gallery,
-            "video": {
-                "url": self.video_url,
-                "path": self.video_path
-            },
-            "social_links": self.social_links,
-            "created_at": self.created_at
+            "_id": ObjectId(self.id) if self.id else None,
+            "conversation_id": self.conversation_id,
+            "sender_id": self.sender_id,
+            "receiver_id": self.receiver_id,
+            "content": self.content,
+            "type": self.type,
+            "status": self.status,
+            "created_at": self.created_at,
+            "updated_at": self.updated_at,
         }
 
     def __repr__(self):
-        return f"<Project Title: {self.title}>"
+        return f"<Message {self.id}>"
 
+
+class Call:
+    def __init__(self, data: dict):
+        data = data or {}
+
+        self.id = str(data.get("_id")) if data.get("_id") else None
+
+        self.caller_id = str(data.get("caller_id")) if data.get("caller_id") else None
+        self.receiver_id = str(data.get("receiver_id")) if data.get("receiver_id") else None
+
+        self.call_type = data.get("call_type", "audio")  # audio, video
+        self.status = data.get("status", "missed")  # answered, rejected, busy, missed
+
+        self.started_at = data.get("started_at")
+        self.ended_at = data.get("ended_at")
+
+        self.duration = int(data.get("duration", 0))  # seconds
+
+    def calculate_duration(self):
+        if self.started_at and self.ended_at:
+            self.duration = int((self.ended_at - self.started_at).total_seconds())
+        return self.duration
+
+    def to_dict(self):
+        return {
+            "_id": ObjectId(self.id) if self.id else None,
+            "caller_id": self.caller_id,
+            "receiver_id": self.receiver_id,
+            "call_type": self.call_type,
+            "status": self.status,
+            "started_at": self.started_at,
+            "ended_at": self.ended_at,
+            "duration": self.duration,
+        }
+
+    def __repr__(self):
+        return f"<Call {self.id}>"
+    
 
 
 class Contact:

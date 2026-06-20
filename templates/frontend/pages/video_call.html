@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Advanced Video Call</title>
+
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+
+<style>
+body {
+    margin:0;
+    font-family:Arial;
+    background:#0b1220;
+    color:white;
+}
+
+/* MAIN LAYOUT */
+.container {
+    display:flex;
+    height:100vh;
+}
+
+/* USERS PANEL */
+.users {
+    width:20%;
+    background:#111827;
+    padding:15px;
+    overflow-y:auto;
+}
+
+.user {
+    padding:10px;
+    margin-bottom:8px;
+    background:#1f2937;
+    border-radius:6px;
+    cursor:pointer;
+    transition:0.2s;
+}
+
+.user:hover {
+    background:#374151;
+}
+
+/* VIDEO AREA */
+.video-area {
+    flex:1;
+    position:relative;
+    display:flex;
+    flex-direction:column;
+    background:black;
+}
+
+.remote-video {
+    flex:1;
+    position:relative;
+}
+
+.remote-video video {
+    width:100%;
+    height:100%;
+    object-fit:cover;
+    background:black;
+}
+
+/* LOCAL VIDEO */
+.local-video {
+    position:absolute;
+    bottom:110px;
+    right:20px;
+    width:160px;
+    height:120px;
+    border:2px solid #38bdf8;
+    border-radius:10px;
+    overflow:hidden;
+    background:black;
+}
+
+.local-video video {
+    width:100%;
+    height:100%;
+}
+
+/* CONTROLS */
+.controls {
+    display:flex;
+    justify-content:center;
+    gap:12px;
+    padding:12px;
+    background:#111827;
+}
+
+button {
+    padding:10px 15px;
+    border:none;
+    border-radius:8px;
+    cursor:pointer;
+    color:white;
+    font-weight:bold;
+}
+
+.call { background:#22c55e; }
+.end { background:#ef4444; }
+.mute { background:#38bdf8; }
+
+/* CHAT */
+.chat {
+    width:25%;
+    display:flex;
+    flex-direction:column;
+    background:#111827;
+}
+
+.messages {
+    flex:1;
+    padding:12px;
+    overflow-y:auto;
+}
+
+.msg {
+    background:#1f2937;
+    padding:8px;
+    margin-bottom:6px;
+    border-radius:6px;
+    font-size:14px;
+}
+
+.input-box {
+    display:flex;
+    padding:10px;
+    background:#0f172a;
+}
+
+input {
+    flex:1;
+    padding:10px;
+    border:none;
+    border-radius:6px;
+}
+
+.send {
+    margin-left:8px;
+    background:#38bdf8;
+}
+
+/* INCOMING CALL POPUP */
+.popup {
+    position:fixed;
+    top:20px;
+    right:20px;
+    background:#1f2937;
+    padding:15px;
+    border-radius:10px;
+    display:none;
+    width:220px;
+}
+
+.popup button {
+    margin-top:8px;
+    width:100%;
+}
+
+.accept { background:green; }
+.reject { background:red; }
+
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<!-- USERS -->
+<div class="users">
+    <h3>Online Users</h3>
+</div>
+
+<!-- VIDEO -->
+<div class="video-area">
+
+    <div class="remote-video">
+        <video id="remoteVideo" autoplay></video>
+
+        <div class="local-video">
+            <video id="localVideo" autoplay muted></video>
+        </div>
+    </div>
+
+    <div class="controls">
+        <button class="call">Call</button>
+        <button class="mute">Mute</button>
+        <button class="end">End</button>
+    </div>
+
+</div>
+
+<!-- CHAT -->
+<div class="chat">
+    <div class="messages"></div>
+
+    <div class="input-box">
+        <input id="msgInput" placeholder="Type message..." />
+        <button class="send">Send</button>
+    </div>
+</div>
+
+</div>
+
+<!-- INCOMING CALL POPUP -->
+<div class="popup" id="popup">
+    <div id="popupText">Incoming call...</div>
+    <button class="accept">Accept</button>
+    <button class="reject">Reject</button>
+</div>
+
+<script>
+const socket = io();
+
+const currentUser = {
+    id: "{{ current_user.id }}",
+    name: "{{ current_user.fullname }}"
+};
+
+let selectedUser = null;
+let inCall = false;
+let currentCallId = null;
+
+/* JOIN */
+socket.emit("join_call", currentUser);
+
+/* ONLINE USERS */
+socket.on("online_users", users => {
+    const box = document.querySelector(".users");
+    box.innerHTML = "<h3>Online Users</h3>";
+
+    users.forEach(u => {
+        const div = document.createElement("div");
+        div.className = "user";
+        div.innerText = "🟢 " + u.name;
+
+        div.onclick = () => {
+            selectedUser = u;
+            addMsg("System", "Selected: " + u.name);
+        };
+
+        box.appendChild(div);
+    });
+});
+
+/* CHAT */
+function addMsg(from, text){
+    const div = document.createElement("div");
+    div.className = "msg";
+    div.innerHTML = "<b>"+from+":</b> "+text;
+    document.querySelector(".messages").appendChild(div);
+}
+
+document.querySelector(".send").onclick = () => {
+    if(inCall) return alert("Chat disabled during call");
+
+    const text = document.getElementById("msgInput").value;
+    if(!text) return;
+
+    socket.emit("send_message", {
+        from: currentUser,
+        to: selectedUser,
+        text: text
+    });
+
+    document.getElementById("msgInput").value = "";
+};
+
+socket.on("receive_message", data => {
+    addMsg(data.from, data.text);
+});
+
+/* CALL START */
+document.querySelector(".call").onclick = () => {
+    if(!selectedUser) return alert("Select user");
+
+    inCall = true;
+
+    socket.emit("start_call", {
+        from: currentUser,
+        to: selectedUser
+    });
+
+    addMsg("System", "Calling " + selectedUser.name);
+};
+
+/* END CALL */
+document.querySelector(".end").onclick = () => {
+    inCall = false;
+
+    socket.emit("end_call", {
+        call_id: currentCallId
+    });
+
+    addMsg("System", "Call ended");
+};
+
+/* MUTE */
+document.querySelector(".mute").onclick = () => {
+    addMsg("System", "Mic muted (WebRTC ready)");
+};
+
+/* INCOMING CALL */
+socket.on("incoming_call", data => {
+    const popup = document.getElementById("popup");
+    popup.style.display = "block";
+
+    document.getElementById("popupText").innerText =
+        "Call from " + data.from.name;
+
+    currentCallId = data.call_id;
+
+    document.querySelector(".accept").onclick = () => {
+        popup.style.display = "none";
+        inCall = true;
+        addMsg("System", "Call accepted");
+    };
+
+    document.querySelector(".reject").onclick = () => {
+        popup.style.display = "none";
+        addMsg("System", "Call rejected");
+    };
+});
+
+/* CALL ENDED */
+socket.on("call_ended", () => {
+    inCall = false;
+    addMsg("System", "Call ended by user");
+});
+
+</script>
+
+</body>
+</html>

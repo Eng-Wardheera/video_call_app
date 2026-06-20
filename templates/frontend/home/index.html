@@ -1,11 +1,299 @@
 <!DOCTYPE html>
+
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Video Live Chat</title>
+
+```
+<style>
+    *{
+        margin:0;
+        padding:0;
+        box-sizing:border-box;
+        font-family:Arial, Helvetica, sans-serif;
+    }
+
+    body{
+        background:#0f172a;
+        color:#fff;
+    }
+
+    .navbar{
+        display:flex;
+        justify-content:space-between;
+        align-items:center;
+        padding:20px 10%;
+        background:#111827;
+    }
+
+    .logo{
+        font-size:24px;
+        font-weight:bold;
+        color:#38bdf8;
+    }
+
+    .nav-links{
+        display:flex;
+        align-items:center;
+        gap:20px;
+    }
+
+    .nav-links a{
+        text-decoration:none;
+        color:white;
+    }
+
+    .hero{
+        min-height:90vh;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        text-align:center;
+        padding:20px;
+    }
+
+    .hero-content{
+        max-width:800px;
+    }
+
+    .hero h1{
+        font-size:55px;
+        margin-bottom:20px;
+    }
+
+    .hero p{
+        font-size:20px;
+        color:#cbd5e1;
+        margin-bottom:30px;
+        line-height:1.7;
+    }
+
+    .btn{
+        display:inline-flex;
+        align-items:center;
+        gap:10px;
+        padding:15px 30px;
+        border-radius:8px;
+        text-decoration:none;
+        font-size:18px;
+        transition:.3s;
+    }
+
+    .google-btn{
+        background:white;
+        color:#333;
+        font-weight:bold;
+    }
+
+    .google-btn:hover{
+        transform:translateY(-2px);
+    }
+
+    .dashboard-btn{
+        background:#38bdf8;
+        color:white;
+    }
+
+    .dashboard-btn:hover{
+        background:#0ea5e9;
+    }
+
+    .profile{
+        margin-top:20px;
+    }
+
+    .profile img{
+        width:120px;
+        height:120px;
+        border-radius:50%;
+        object-fit:cover;
+        border:4px solid #38bdf8;
+    }
+
+    .profile h2{
+        margin-top:15px;
+    }
+
+    .profile p{
+        margin-top:10px;
+    }
+
+    .features{
+        padding:80px 10%;
+        background:#111827;
+    }
+
+    .features h2{
+        text-align:center;
+        margin-bottom:40px;
+    }
+
+    .cards{
+        display:grid;
+        grid-template-columns:repeat(auto-fit,minmax(250px,1fr));
+        gap:20px;
+    }
+
+    .card{
+        background:#1e293b;
+        padding:25px;
+        border-radius:12px;
+        text-align:center;
+    }
+
+    .card h3{
+        margin-bottom:15px;
+        color:#38bdf8;
+    }
+
+    .card p{
+        color:#cbd5e1;
+    }
+
+    footer{
+        text-align:center;
+        padding:20px;
+        background:#0f172a;
+        color:#94a3b8;
+    }
+</style>
+```
+
 </head>
 <body>
-    <h1>Welcome Video Live Chat</h1>
+
+```
+<!-- Navbar -->
+<nav class="navbar">
+
+    <div class="logo">
+        Video Live Chat
+    </div>
+
+    <div class="nav-links">
+
+        <a href="/">Home</a>
+
+        {% if current_user.is_authenticated %}
+
+            <span>{{ current_user.fullname }}</span>
+
+            <a href="/logout">Logout</a>
+
+        {% else %}
+
+            <a href="{{ url_for('main.login_google') }}">
+                Login
+            </a>
+
+        {% endif %}
+
+    </div>
+
+</nav>
+
+<!-- Hero -->
+<section class="hero">
+
+    <div class="hero-content">
+
+        <h1>
+            Connect With Anyone, Anywhere
+        </h1>
+
+        <p>
+            Secure real-time video calling, voice chat and messaging
+            powered by Flask, MongoDB, WebRTC and Google OAuth.
+        </p>
+
+        {% if current_user.is_authenticated %}
+
+            <div class="profile">
+
+                {% if current_user.photo %}
+                <img
+                    src="{{ current_user.photo }}"
+                    alt="Profile"
+                >
+                {% endif %}
+
+                <h2>
+                    {{ current_user.fullname }}
+                </h2>
+
+                <p>
+                    {{ current_user.email }}
+                </p>
+
+                <br>
+
+                <a href="/call_video" class="btn dashboard-btn">
+                    Enter Chat Room
+                </a>
+
+            </div>
+
+        {% else %}
+
+            <a
+                href="{{ url_for('main.login_google') }}"
+                class="btn google-btn"
+            >
+
+                <svg width="20" height="20" viewBox="0 0 48 48">
+                    <path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.3 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3 0 5.7 1.1 7.8 3l5.7-5.7C34.1 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.3-.4-3.5z"/>
+                    <path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 18.9 12 24 12c3 0 5.7 1.1 7.8 3l5.7-5.7C34.1 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/>
+                    <path fill="#4CAF50" d="M24 44c5.2 0 10-2 13.6-5.3l-6.3-5.2C29.3 35.1 26.8 36 24 36c-5.3 0-9.7-3.3-11.3-8H6.2C9.5 39.5 15.9 44 24 44z"/>
+                    <path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-1.1 3.1-3.3 5.5-6.3 6.9l6.3 5.2C39.2 36.4 44 30.8 44 24c0-1.3-.1-2.3-.4-3.5z"/>
+                </svg>
+
+                Sign in with Google
+
+            </a>
+
+        {% endif %}
+
+    </div>
+
+</section>
+
+<!-- Features -->
+<section class="features">
+
+    <h2>Features</h2>
+
+    <div class="cards">
+
+        <div class="card">
+            <h3>Video Calls</h3>
+            <p>High quality one-to-one video calling.</p>
+        </div>
+
+        <div class="card">
+            <h3>Voice Calls</h3>
+            <p>Crystal clear audio communication.</p>
+        </div>
+
+        <div class="card">
+            <h3>Secure Chat</h3>
+            <p>Private and secure messaging system.</p>
+        </div>
+
+        <div class="card">
+            <h3>Google OAuth</h3>
+            <p>Quick and secure authentication using Google.</p>
+        </div>
+
+    </div>
+
+</section>
+
+<footer>
+    &copy; 2026 Video Live Chat. All Rights Reserved.
+</footer>
+```
+
 </body>
 </html>
