@@ -19,6 +19,9 @@ email-validator
 flask-socketio 
 eventlet
 
+Flask-SocketIO
+PyYAML
+
 pycountry
 pytz
 
